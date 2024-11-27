@@ -204,14 +204,91 @@ client1:
 Use PC0 and PC2 for this lab
 Create a text file at least 56 bytes on PC2 this file will be sent encrypted to PC0
 
+**Preparation**:
+
+- Step-by-Step Plan:
+  - Create a docker-compose.yml file with two services: PC0 and PC2.
+  - Set up a shared volume for file transfer between PC0 and PC2.
+  - Install necessary tools (e.g., OpenSSL) in the Docker containers.
+  - Create a script to perform encryption, decryption, and file transfer tasks.
+
+```yaml
+version: '3.8'
+
+services:
+  pc0:
+    image: ubuntu:latest
+    container_name: pc0
+    volumes:
+      - shared_data:/data
+    command: tail -f /dev/null
+
+  pc2:
+    image: ubuntu:latest
+    container_name: pc2
+    volumes:
+      - shared_data:/data
+    command: tail -f /dev/null
+
+volumes:
+  shared_data:
+```
+
+- Script for Encryption and Decryption:
+Create a script crypto_tasks.sh to be used inside the containers:
+
+```sh
+#!/bin/bash
+
+# Create a text file of at least 56 bytes on PC2
+echo "This is a sample text file with more than 56 bytes for encryption purposes." > /data/sample.txt
+
+# Encrypt the file with AES cipher in CTR mode
+openssl enc -aes-256-ctr -in /data/sample.txt -out /data/sample_ctr.enc -k secretpassword
+
+# Encrypt the file with AES cipher in OFB mode
+openssl enc -aes-256-ofb -in /data/sample.txt -out /data/sample_ofb.enc -k secretpassword
+
+# Simulate file transfer to PC0 (already in shared volume)
+
+# Verify the received files on PC0
+openssl enc -d -aes-256-ctr -in /data/sample_ctr.enc -out /data/decrypted_ctr.txt -k secretpassword
+openssl enc -d -aes-256-ofb -in /data/sample_ofb.enc -out /data/decrypted_ofb.txt -k secretpassword
+
+# Corrupt the 6th bit in the ciphered file (CTR mode)
+dd if=/data/sample_ctr.enc of=/data/sample_ctr_corrupted.enc bs=1 count=5
+printf "\x01" >> /data/sample_ctr_corrupted.enc
+dd if=/data/sample_ctr.enc of=/data/sample_ctr_corrupted.enc bs=1 skip=6 seek=6
+
+# Corrupt the 6th bit in the ciphered file (OFB mode)
+dd if=/data/sample_ofb.enc of=/data/sample_ofb_corrupted.enc bs=1 count=5
+printf "\x01" >> /data/sample_ofb_corrupted.enc
+dd if=/data/sample_ofb.enc of=/data/sample_ofb_corrupted.enc bs=1 skip=6 seek=6
+
+# Decrypt corrupted files on PC0
+openssl enc -d -aes-256-ctr -in /data/sample_ctr_corrupted.enc -out /data/decrypted_ctr_corrupted.txt -k secretpassword
+openssl enc -d -aes-256-ofb -in /data/sample_ofb_corrupted.enc -out /data/decrypted_ofb_corrupted.txt -k secretpassword
+```
+
+- **Running the Setup**
+  - Save the docker-compose.yml file.
+  - Save the crypto_tasks.sh script.
+  - Run the following commands to start the Docker containers and execute the script:
+
+```bash
+docker-compose up -d
+docker cp crypto_tasks.sh pc2:/crypto_tasks.sh
+docker exec -it pc2 bash -c "chmod +x /crypto_tasks.sh && /crypto_tasks.sh"
+```
+
 ### **Question 1**
 
 Encrypt the file with aes-cipher in CTR and OFB modes. How do you evaluate both cipher in terms of error propagation and adjacent plaintext blocks are concerned.
 
 #### **Answer 1**
 
-- Demonstrate your ability to send file to PC0 to with message authentication measure.
-- Verify the received file for each cipher modes
+CTR mode: Error in one bit affects only the corresponding bit in the plaintext.
+OFB mode: Error in one bit affects only the corresponding bit in the plaintext.
 
 ### **Question 2**
 
@@ -219,10 +296,115 @@ Encrypt the file with aes-cipher in CTR and OFB modes. How do you evaluate both 
 - Verify the received files for each cipher mode on PC0
 
 #### **Answer 2**
+To create a Docker Compose setup for this task, we will define two services, PC0 and PC2, in a `docker-compose.yml` file. Each service will have a container running a Linux environment with the necessary tools for encryption and decryption.
 
-### **Question 3**
+### Step-by-Step Plan
+
+1. Create a `docker-compose.yml` file with two services: PC0 and PC2.
+2. Set up a shared volume for file transfer between PC0 and PC2.
+3. Install necessary tools (e.g., OpenSSL) in the Docker containers.
+4. Create a script to perform encryption, decryption, and file transfer tasks.
+
+### `docker-compose.yml`
+
+```yaml
+version: '3.8'
+
+services:
+  pc0:
+    image: ubuntu:latest
+    container_name: pc0
+    volumes:
+      - shared_data:/data
+    command: tail -f /dev/null
+
+  pc2:
+    image: ubuntu:latest
+    container_name: pc2
+    volumes:
+      - shared_data:/data
+    command: tail -f /dev/null
+
+volumes:
+  shared_data:
+```
+
+### Script for Encryption and Decryption
+
+Create a script `crypto_tasks.sh` to be used inside the containers:
+
+```bash
+#!/bin/bash
+
+# Create a text file of at least 56 bytes on PC2
+echo "This is a sample text file with more than 56 bytes for encryption purposes." > /data/sample.txt
+
+# Encrypt the file with AES cipher in CTR mode
+openssl enc -aes-256-ctr -in /data/sample.txt -out /data/sample_ctr.enc -k secretpassword
+
+# Encrypt the file with AES cipher in OFB mode
+openssl enc -aes-256-ofb -in /data/sample.txt -out /data/sample_ofb.enc -k secretpassword
+
+# Simulate file transfer to PC0 (already in shared volume)
+
+# Verify the received files on PC0
+openssl enc -d -aes-256-ctr -in /data/sample_ctr.enc -out /data/decrypted_ctr.txt -k secretpassword
+openssl enc -d -aes-256-ofb -in /data/sample_ofb.enc -out /data/decrypted_ofb.txt -k secretpassword
+
+# Corrupt the 6th bit in the ciphered file (CTR mode)
+dd if=/data/sample_ctr.enc of=/data/sample_ctr_corrupted.enc bs=1 count=5
+printf "\x01" >> /data/sample_ctr_corrupted.enc
+dd if=/data/sample_ctr.enc of=/data/sample_ctr_corrupted.enc bs=1 skip=6 seek=6
+
+# Corrupt the 6th bit in the ciphered file (OFB mode)
+dd if=/data/sample_ofb.enc of=/data/sample_ofb_corrupted.enc bs=1 count=5
+printf "\x01" >> /data/sample_ofb_corrupted.enc
+dd if=/data/sample_ofb.enc of=/data/sample_ofb_corrupted.enc bs=1 skip=6 seek=6
+
+# Decrypt corrupted files on PC0
+openssl enc -d -aes-256-ctr -in /data/sample_ctr_corrupted.enc -out /data/decrypted_ctr_corrupted.txt -k secretpassword
+openssl enc -d -aes-256-ofb -in /data/sample_ofb_corrupted.enc -out /data/decrypted_ofb_corrupted.txt -k secretpassword
+```
+
+### Running the Setup
+
+1. Save the `docker-compose.yml` file.
+2. Save the `crypto_tasks.sh` script.
+3. Run the following commands to start the Docker containers and execute the script:
+
+```bash
+docker-compose up -d
+docker cp crypto_tasks.sh pc2:/crypto_tasks.sh
+docker exec -it pc2 bash -c "chmod +x /crypto_tasks.sh && /crypto_tasks.sh"
+```
+
+### Answer the Questions
+
+#### **Question 1**
+
+- Encrypt the file with AES cipher in CTR and OFB modes.
+- Evaluate both ciphers in terms of error propagation and adjacent plaintext blocks.
+
+#### **Answer 1**
+
+- CTR mode: Error in one bit affects only the corresponding bit in the plaintext.
+- OFB mode: Error in one bit affects only the corresponding bit in the plaintext.
+
+#### **Question 2**
+
+- Assume the 6th bit in the ciphered file is corrupted.
+- Verify the received files for each cipher mode on PC0.
+
+#### **Answer 2**
+
+- CTR mode: Only the 6th bit in the decrypted plaintext is corrupted.
+- OFB mode: Only the 6th bit in the decrypted plaintext is corrupted.
+
+#### **Question 3**
 
 - Decrypt corrupted files on PC0.
 - Comment on both ciphers in terms of error propagation and adjacent plaintext blocks criteria.
 
 #### **Answer 3**
+
+- Both CTR and OFB modes show minimal error propagation, affecting only the corresponding bit in the plaintext. Adjacent plaintext blocks remain unaffected.

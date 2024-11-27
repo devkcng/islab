@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  pc0:
+    image: ubuntu:latest
+    container_name: pc0
+    volumes:
+      - shared_data:/data
+    command: tail -f /dev/null
+
+  pc2:
+    image: ubuntu:latest
+    container_name: pc2
+    volumes:
+      - shared_data:/data
+    command: ["/bin/sh", "-c", "apt-get update -y && apt-get install -y openssl && tail -f /dev/null"]
+
+volumes:
+  shared_data:

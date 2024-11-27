@@ -19,7 +19,7 @@ services:
         ipv4_address: 172.18.0.2
     volumes:
       - ./html:/var/www/html
-    command: ["/bin/sh", "-c", "apt-get update && apt-get install -y openssh-server nginx && service ssh start && service nginx start && tail -f /dev/null"]
+    command: ["/bin/sh", "-c", "apt-get update -y && apt-get install -y openssh-server nginx && service ssh start && service nginx start && tail -f /dev/null"]
     environment:
       - ROOT_PASSWORD=rootpassword
 
