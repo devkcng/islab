@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  router:
+    image: alpine
+    command: ["sh", "-c", "echo 1 > /proc/sys/net/ipv4/ip_forward && sleep infinity"]
+    networks:
+      subnet1:
+        ipv4_address: 172.18.0.254
+      subnet2:
+        ipv4_address: 172.19.0.254
+    cap_add:
+      - NET_ADMIN
+
+  webserver:
+    image: ubuntu:20.04
+    networks:
+      subnet1:
+        ipv4_address: 172.18.0.2
+    volumes:
+      - ./html:/var/www/html
+    command: ["/bin/sh", "-c", "apt-get update && apt-get install -y openssh-server nginx && service ssh start && service nginx start && tail -f /dev/null"]
+    environment:
+      - ROOT_PASSWORD=rootpassword
+
+  client1:
+    image: alpine
+    command: ["sh", "-c", "apk add --no-cache openssh-client && sleep infinity"]
+    networks:
+      subnet2:
+        ipv4_address: 172.19.0.2
+
+  client2:
+    image: alpine
+    command: ["sh", "-c", "sleep infinity"]
+    networks:
+      subnet2:
+        ipv4_address: 172.19.0.3
+
+networks:
+  subnet1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+  subnet2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
